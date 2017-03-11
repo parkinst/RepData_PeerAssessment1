@@ -32,27 +32,123 @@ The variables included in this dataset are:
 
 The dataset is stored in a comma-separated-value (CSV) file and there are a total of 17,568 observations in this dataset.
 
+
+## Load and prepare the data  
+Assumes that the zip file, named "activity.zip" is present in the current working directory.   
+
 ```{r load_data}
-      # load the data
-      activity <- read.csv("activity.csv", header=TRUE)
-      activity$date <- as.Date(activity$date, format="%Y-%m-%d")
+unzip("activity.zip")
+    
+activity <- read.csv("activity.csv", header=TRUE)
+activity$date <- as.Date(activity$date, format="%Y-%m-%d")
       
 ```
 
-## Loading and preprocessing the data
-
-
-
 ## What is mean total number of steps taken per day?
+We will summarize the total number of steps taken each day, and then display this
+data in a histogram. Note that for this part of the exercise we are ignoring missing values. 
+
+```{r}
+
+
+library(dplyr)
+
+# summarize the data by day
+df <- activity %>%
+ 		group_by(date)%>%
+ 		summarise (TotalSteps = sum(steps))
+
+# make histogram of results
+hist(df$TotalSteps, main = "Total Number of Steps by Day", ylab = "Frequency", xlab = "Number of Steps")
+
+```
+
+Next we calculate the mean number of steps taken daily, ignoring days with missing values.  
+```{r}
+mean(df$TotalSteps,na.rm=TRUE)
+```
+Now we calculate the median number of daily steps, again ignoring days with missing values.
+```{r}
+median(df$TotalSteps,na.rm=TRUE)
+```
 
 
 
 ## What is the average daily activity pattern?
+We will now examine a time plot of the average number of steps taken during each 5 minute interval, ignoring missing values. 
 
+```{r}
+library(ggplot2)
+df2 <- activity %>%
+      group_by(interval) %>%
+      summarise(MeanSteps=mean(steps, na.rm=TRUE))
+qplot(x=df2$interval,y=df2$MeanSteps, geom="line", xlab="Time Interval", ylab="Number of Steps", main="Average Number of Steps by Time Interval")
+```
+
+The time interval which has the highest average number of steps is
+`r df2[which.max(df2$MeanSteps),]$interval` and that average number of steps is 
+`r round(max(df2$MeanSteps), digits=1)`
 
 
 ## Imputing missing values
+There are a number of intervals for which we do not have the number of steps recorded. There are `r  sum(!complete.cases(activity))` such intervals missing values.
 
+```{r}
+# show the code that was used above to calculate the number of missing values
+sum(!complete.cases(activity))
+```
+
+It would seem that a reasonable strategy for imputing the missing values would be to populate any missing value with the average number of steps for that particular time interval. This is done below; note that this requires the 'zoo' package. 
+```{r}
+library(zoo)
+
+# create new dataframe with the NA values imputed
+activity_complete <- activity
+activity_complete$steps <- na.aggregate(activity_complete$steps,activity_complete$interval)
+
+#summarise the data by day
+df3 <- activity_complete %>%
+ 		group_by(date)%>%
+ 		summarise (TotalSteps = sum(steps))
+
+# make histogram of results
+hist(df3$TotalSteps, main = "Total Number of Steps by Day, Missing Values Imputed", ylab = "Frequency", xlab = "Number of Steps")
+```
+
+Next we calculate the mean number of steps taken daily, using the new dataframe with imputed values where data was missing. 
+```{r}
+mean(df3$TotalSteps)
+```
+Now we calculate the median number of daily steps, again using the new dataframe with imputed values where data was missing. 
+```{r}
+median(df3$TotalSteps)
+```
+We note that the mean stays exactly the same after having imputed the missing values, but that there has been a slight increase in the mdedian. We also note that the impact to the estimated total of daily steps increases right in the middle of the histogram, which is not surprising since we used the median to impute. 
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+Now we will examine if there is a noticeable difference between activity on the weekend versus activity during the week. Note that creating the plots requires the 'gridExtra' package. 
+
+```{r}
+# add factor variable indicating whether or not record is for a weekday
+weekend <- c("Saturday", "Sunday") 
+activity_complete$weekday <- factor(!weekdays(activity_complete$date) %in% weekend, levels = c(FALSE, TRUE))
+
+# split the data out into a dataframe for weekends, and one for weekdays
+wknd_activity <- activity_complete %>%
+                        filter(weekday==FALSE) %>%
+                        group_by(interval) %>%
+                        summarise(MeanSteps = mean(steps)) 
+wkday_activity <- activity_complete %>%
+                        filter(weekday==TRUE) %>%
+                        group_by(interval) %>%
+                        summarise(MeanSteps = mean(steps))
+
+# now create the plots
+library(gridExtra)
+
+plot1 <- qplot(x=wknd_activity$interval,y=wknd_activity$MeanSteps, geom="line", xlab="Time Interval", ylab="Average Number of Steps", main="Weekends")
+plot2 <- qplot(x=wkday_activity$interval,y=wkday_activity$MeanSteps, geom="line", xlab="Time Interval", ylab="Average Number of Steps", main="Weekdays")
+grid.arrange(plot1, plot2, nrow=2)
+```
+
