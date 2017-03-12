@@ -17,6 +17,8 @@ output:
 
 This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
 
+NOTE: to properly view this output in GitHub, you need to look at the .md file, rather than the .Rmd file. GitHub does not embed the images properly in the .Rmd. 
+
 ## Data  
 
 The data for this assignment can be downloaded from the course web site:
@@ -153,4 +155,4 @@ plot1 <- qplot(x=wknd_activity$interval,y=wknd_activity$MeanSteps, geom="line", 
 plot2 <- qplot(x=wkday_activity$interval,y=wkday_activity$MeanSteps, geom="line", xlab="Time Interval", ylab="Average Number of Steps", main="Weekdays")
 grid.arrange(plot1, plot2, nrow=2)
 ```
-
+From examining the above plots, we note that the subject seems to be more active on weekends than on weekdays, on average.
